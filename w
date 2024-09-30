@@ -171,27 +171,28 @@ async def on_ready():
     check_sellix_orders.start()
     await bot.change_presence(status=discord.Status.dnd, activity=discord.Game(config["BOT_STATUS"]))
 
-# Task to check for new Sellix orders
+# Task to check for new Sellauth orders
 @tasks.loop(seconds=10)
-async def check_sellix_orders():
+async def check_sellauth_orders():
     headers = {
-        'Authorization': f'Bearer {config["SELLIX_API_KEY"]}',
+        'Authorization': f'Bearer {config["SELLAUTH_API_KEY"]}',  # Updated key for Sellauth API
         'Content-Type': 'application/json',
     }
-    response = requests.get('https://dev.sellix.io/v1/orders', headers=headers)
-    orders = response.json().get('data', {}).get('orders', [])
+    response = requests.get('https://api.sellauth.com/v1/orders', headers=headers)  # Updated Sellauth URL
+    orders = response.json().get('data', {}).get('orders', [])  # Ensure this matches Sellauth response structure
 
     claimed_orders = load_json(config['CLAIMED_JSON'])
 
     for order in orders:
-        order_id = order['uniqid']
+        order_id = order['id']  # Ensure this matches Sellauth's order ID field
         unclaimed_path = os.path.join(config['UNCLAIMED_FOLDER'], f'{order_id}.json')
 
-        # Check if the order is a Sellix Service product, has a status of "COMPLETED", and is not in claimed_orders
+        # Check if the order is a SERVICE product and COMPLETED status, adjust field names for Sellauth if needed
         if order.get('product_type') == 'SERVICE' and order.get('status') == 'COMPLETED' and order_id not in claimed_orders:
             if not os.path.exists(unclaimed_path):
                 with open(unclaimed_path, 'w') as f:
                     json.dump(order, f, indent=4)
+
 
 @bot.command()
 @is_admin_or_owner()
